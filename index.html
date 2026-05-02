@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>赛博上香 · 我丢</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  .scene { position: absolute; inset: 0; transition: opacity 0.8s ease; }
+  .scene-hidden { opacity: 0; pointer-events: none; }
+
+  /* ══════ 场景一：翻篇卡片 ══════ */
+  #card-scene {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #FFF8F0 0%, #F5E6D8 100%);
+    gap: 32px;
+  }
+  .card {
+    width: 280px; padding: 24px 28px;
+    background: rgba(255,255,255,0.85);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+    text-align: center;
+    transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 1.2s ease;
+  }
+  .card-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+  .card-title { font-size: 20px; color: #3D3551; font-weight: 600; margin-bottom: 6px; }
+  .card-date { font-size: 13px; color: #9B8E8E; margin-bottom: 16px; }
+  .card-meta { display: flex; justify-content: center; gap: 16px; font-size: 12px; color: #A89B9B; }
+  .card-mood { padding: 4px 10px; border-radius: 12px; background: #F2D5D5; color: #C07B7B; }
+  .btn-fanpian {
+    width: 200px; height: 48px; border: none; border-radius: 24px;
+    background: linear-gradient(135deg, #C9A96E, #D4B88A);
+    color: #fff; font-size: 17px; font-weight: 600;
+    cursor: pointer; letter-spacing: 2px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 16px rgba(201,169,110,0.3);
+  }
+  .btn-fanpian:active { transform: scale(0.95); box-shadow: 0 2px 8px rgba(201,169,110,0.2); }
+  .btn-fanpian:disabled { opacity: 0.5; pointer-events: none; }
+  .card-fade-out { opacity: 0 !important; transform: translateY(-60px) scale(0.92) !important; }
+  .hint-text { font-size: 14px; color: #B8A5A5; opacity: 0; transition: opacity 1s ease; }
+  .hint-visible { opacity: 1; }
+
+  /* ══════ 场景二：选香数量 ══════ */
+  #pick-scene {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #1a1520; gap: 36px;
+    transition: opacity 0.5s ease;
+  }
+  .pick-title { color: rgba(255,255,255,0.55); font-size: 15px; letter-spacing: 4px; }
+  .pick-options { display: flex; gap: 16px; align-items: stretch; }
+  .pick-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 20px 22px; min-width: 80px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px; background: transparent;
+    color: rgba(255,255,255,0.45); cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .pick-btn:hover, .pick-btn:active { border-color: rgba(255,140,66,0.5); color: rgba(255,255,255,0.9); }
+  .pick-btn:active { transform: scale(0.95); }
+  .pick-sticks { display: flex; justify-content: center; gap: 3px; align-items: flex-end; }
+  .pick-mini-stick { width: 2px; background: linear-gradient(180deg, #C4A882 60%, #6b5040 100%); border-radius: 1px; }
+  .pick-label { font-size: 13px; letter-spacing: 2px; }
+
+  /* ══════ 场景三：赛博上香 ══════ */
+  #incense-scene {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #1a1520; gap: 20px;
+  }
+  .incense-area { position: relative; width: 300px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .burner {
+    background: linear-gradient(180deg, #5a4a3a 0%, #3d3028 100%);
+    border-radius: 10px 10px 20px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.05);
+  }
+  .sticks-container { position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; align-items: flex-end; }
+  .stick {
+    width: 3px; height: 110px;
+    background: linear-gradient(180deg, #C4A882 60%, #6b5040 100%);
+    border-radius: 2px; position: relative;
+    transition: opacity 0.5s ease;
+  }
+  .stick-tip {
+    position: absolute; top: -5px; left: -3px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #4a3530;
+    transition: background 1s ease, box-shadow 1s ease;
+  }
+  .stick-tip-glowing { background: #FF8C42 !important; box-shadow: 0 0 16px #FF8C42, 0 0 40px rgba(255,140,66,0.5) !important; }
+  #smoke-canvas { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 300px; height: 230px; pointer-events: none; }
+  .blessing {
+    position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+    font-size: 16px; color: rgba(255,255,255,0.85);
+    white-space: nowrap; opacity: 0;
+    transition: opacity 1.5s ease 0.8s;
+    letter-spacing: 2px; pointer-events: none;
+  }
+  .blessing-visible { opacity: 1; }
+  .prompt { color: rgba(255,255,255,0.4); font-size: 14px; letter-spacing: 3px; transition: opacity 0.5s ease; }
+  .btn-retry {
+    position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+    width: 140px; height: 40px; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; background: transparent;
+    color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease 1.5s, border-color 0.3s ease, color 0.3s ease;
+  }
+  .btn-retry:hover { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.8); }
+  .btn-retry-visible { opacity: 1; pointer-events: auto; }
+  .progress-ring {
+    position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+    width: 30px; height: 30px; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .progress-ring-visible { opacity: 1; }
+  .progress-ring svg { transform: rotate(-90deg); }
+  .progress-ring circle { fill: none; stroke: rgba(255,255,255,0.15); stroke-width: 2; }
+  .progress-ring .progress-fill { fill: none; stroke: rgba(255,140,66,0.7); stroke-width: 2; stroke-dasharray: 75.4; stroke-dashoffset: 75.4; transition: stroke-dashoffset 0.1s linear; }
+</style>
+</head>
+<body>
+
+<!-- ══════ 场景一：翻篇卡片 ══════ -->
+<div class="scene" id="card-scene">
+  <div class="card" id="farewell-card">
+    <span class="card-icon">🐰</span>
+    <div class="card-title">毛绒兔子</div>
+    <div class="card-date">2024 年春天丢的</div>
+    <div class="card-meta">
+      <span class="card-mood">很难放下</span>
+      <span>已寻 12 天</span>
+    </div>
+  </div>
+  <button class="btn-fanpian" id="btn-fanpian">让它走吧</button>
+  <div class="hint-text" id="hint">嗯。这个不太好放下对吧。</div>
+</div>
+
+<!-- ══════ 场景二：选香数量 ══════ -->
+<div class="scene scene-hidden" id="pick-scene">
+  <span class="pick-title">上几柱？</span>
+  <div class="pick-options">
+    <button class="pick-btn" data-count="1">
+      <div class="pick-sticks"><div class="pick-mini-stick" style="height:36px"></div></div>
+      <span class="pick-label">一柱</span>
+    </button>
+    <button class="pick-btn" data-count="3">
+      <div class="pick-sticks">
+        <div class="pick-mini-stick" style="height:40px"></div>
+        <div class="pick-mini-stick" style="height:36px"></div>
+        <div class="pick-mini-stick" style="height:32px"></div>
+      </div>
+      <span class="pick-label">三柱</span>
+    </button>
+    <button class="pick-btn" data-count="5">
+      <div class="pick-sticks">
+        <div class="pick-mini-stick" style="height:44px"></div>
+        <div class="pick-mini-stick" style="height:40px"></div>
+        <div class="pick-mini-stick" style="height:36px"></div>
+        <div class="pick-mini-stick" style="height:32px"></div>
+        <div class="pick-mini-stick" style="height:28px"></div>
+      </div>
+      <span class="pick-label">五柱</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══════ 场景三：赛博上香 ══════ -->
+<div class="scene scene-hidden" id="incense-scene">
+  <div class="prompt" id="prompt">长按 3 秒 · 点火上香</div>
+  <div class="incense-area">
+    <div class="blessing" id="blessing"></div>
+    <div class="sticks-container" id="sticks-container"></div>
+    <div class="burner" id="burner"></div>
+    <canvas id="smoke-canvas"></canvas>
+  </div>
+  <div class="progress-ring" id="progress-ring">
+    <svg width="30" height="30" viewBox="0 0 30 30">
+      <circle cx="15" cy="15" r="12"/>
+      <circle class="progress-fill" id="progress-fill" cx="15" cy="15" r="12"/>
+    </svg>
+  </div>
+  <button class="btn-retry" id="btn-retry">再选几柱</button>
+</div>
+
+<script>
+(function() {
+  /* ══════ 音效引擎 ══════ */
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function playHum() { /* 音效已移除 */ }
+  function playTick() { /* 音效已移除 */ }
+  function playIgnite() { /* 音效已移除 */ }
+  function playOverlayHum() { /* 音效已移除 */ }
+  function vibrate(ms) { try { navigator.vibrate?.(ms); } catch(e) {} }
+
+  /* ══════ DOM ══════ */
+  const cardScene = document.getElementById('card-scene');
+  const pickScene = document.getElementById('pick-scene');
+  const incenseScene = document.getElementById('incense-scene');
+  const farewellCard = document.getElementById('farewell-card');
+  const btnFanpian = document.getElementById('btn-fanpian');
+  const hint = document.getElementById('hint');
+  const burner = document.getElementById('burner');
+  const sticksContainer = document.getElementById('sticks-container');
+  const blessing = document.getElementById('blessing');
+  const prompt = document.getElementById('prompt');
+  const progressRing = document.getElementById('progress-ring');
+  const progressFill = document.getElementById('progress-fill');
+  const btnRetry = document.getElementById('btn-retry');
+  const canvas = document.getElementById('smoke-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 300; canvas.height = 230;
+
+  let stickCount = 1;
+  let stickTips = [];
+
+  const blessings = [
+    '走好，不送。', '感谢陪伴，江湖再见。',
+    '下辈子别跟丢三落四的人。', '你充电宝七进七出，这柱香值得。',
+    '它去流浪了。你这边，翻篇。', '来过，陪过。两清了。',
+    '聚是一团火，丢是满天星。', '香火一柱，往事清零。',
+  ];
+
+  /* ══════ 场景一：翻篇 ══════ */
+  btnFanpian.addEventListener('click', async () => {
+    initAudio();
+    btnFanpian.disabled = true;
+    await sleep(500);
+    hint.classList.add('hint-visible'); vibrate(20);
+    await sleep(1500);
+    hint.classList.remove('hint-visible');
+    farewellCard.classList.add('card-fade-out'); vibrate(30);
+    await sleep(800);
+    cardScene.classList.add('scene-hidden');
+    pickScene.classList.remove('scene-hidden');
+  });
+
+  /* ══════ 场景二：选香 ══════ */
+  document.querySelectorAll('.pick-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      initAudio();
+      stickCount = parseInt(btn.dataset.count);
+      vibrate(15);
+      pickScene.classList.add('scene-hidden');
+      incenseScene.classList.remove('scene-hidden');
+      setupSticks(stickCount);
+      resetIncense();
+    });
+  });
+
+  function setupSticks(count) {
+    sticksContainer.innerHTML = '';
+    stickTips = [];
+    const w = count === 1 ? 80 : count === 3 ? 130 : 180;
+    const h = count === 1 ? 50 : 52;
+    burner.style.width = w + 'px';
+    burner.style.height = h + 'px';
+    const stickGap = count <= 3 ? 18 : 12;
+    for (let i = 0; i < count; i++) {
+      const stickEl = document.createElement('div');
+      stickEl.className = 'stick';
+      if (count >= 5) stickEl.style.height = '100px';
+      const tipEl = document.createElement('div');
+      tipEl.className = 'stick-tip';
+      stickEl.appendChild(tipEl);
+      sticksContainer.appendChild(stickEl);
+      stickTips.push(tipEl);
+    }
+    sticksContainer.style.gap = stickGap + 'px';
+    sticksContainer.style.bottom = (count >= 5 ? 38 : 42) + 'px';
+  }
+
+  /* ══════ 场景三：上香 ══════ */
+  const HOLD_DURATION = 3000;
+  let holdTimer = null, holdStart = 0, isHolding = false;
+  let smokeAnimId = null, smokeParticles = [], lit = false;
+
+  function resetIncense() {
+    lit = false;
+    stickTips.forEach(t => t.classList.remove('stick-tip-glowing'));
+    blessing.classList.remove('blessing-visible'); blessing.textContent = '';
+    prompt.style.opacity = '1'; prompt.textContent = '长按 3 秒 · 点火上香';
+    btnRetry.classList.remove('btn-retry-visible');
+    progressRing.classList.remove('progress-ring-visible');
+    progressFill.style.strokeDashoffset = '75.4';
+    smokeParticles = [];
+    if (smokeAnimId) { cancelAnimationFrame(smokeAnimId); smokeAnimId = null; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function startHold(e) {
+    if (lit) return;
+    e.preventDefault(); initAudio();
+    isHolding = true; holdStart = Date.now();
+    progressRing.classList.add('progress-ring-visible');
+    prompt.textContent = '别松手...';
+    holdTimer = setInterval(() => {
+      const elapsed = Date.now() - holdStart;
+      const p = Math.min(elapsed / HOLD_DURATION, 1);
+      progressFill.style.strokeDashoffset = (75.4 * (1 - p)).toFixed(1);
+      if (p > 0.6) stickTips.forEach(t => t.classList.add('stick-tip-glowing'));
+      const sec = Math.floor(p * 3);
+      if (sec > (holdTimer._lastSec || 0)) { holdTimer._lastSec = sec; vibrate(10); playTick(); }
+      // 三秒到了自动点火，不管松没松手
+      if (elapsed >= HOLD_DURATION) {
+        clearInterval(holdTimer);
+        isHolding = false;
+        progressRing.classList.remove('progress-ring-visible');
+        progressFill.style.strokeDashoffset = '75.4';
+        lightIncense();
+      }
+    }, 50);
+  }
+
+  function endHold(e) {
+    if (!isHolding) return;
+    e.preventDefault(); isHolding = false;
+    clearInterval(holdTimer);
+    // 没到三秒就松手了
+    progressRing.classList.remove('progress-ring-visible');
+    progressFill.style.strokeDashoffset = '75.4';
+    stickTips.forEach(t => t.classList.remove('stick-tip-glowing'));
+    prompt.textContent = '还差一点...';
+    setTimeout(() => { if (!lit) prompt.textContent = '长按 3 秒 · 点火上香'; }, 1500);
+  }
+
+  burner.addEventListener('touchstart', startHold, { passive: false });
+  burner.addEventListener('touchend', endHold, { passive: false });
+  burner.addEventListener('touchcancel', endHold);
+  burner.addEventListener('mousedown', startHold);
+  burner.addEventListener('mouseup', endHold);
+  burner.addEventListener('mouseleave', endHold);
+
+  function lightIncense() {
+    lit = true; prompt.style.opacity = '0';
+    stickTips.forEach(t => t.classList.add('stick-tip-glowing'));
+    playIgnite(); vibrate([15, 20, 40]);
+    playHum();
+    if (stickCount >= 3) setTimeout(playOverlayHum, 300);
+    blessing.textContent = blessings[Math.floor(Math.random() * blessings.length)];
+    startSmoke();
+    setTimeout(() => blessing.classList.add('blessing-visible'), 600);
+    setTimeout(dissipate, 3500);
+  }
+
+  function getStickOrigins() {
+    const origins = [];
+    const count = stickCount;
+    const spacing = count <= 3 ? 18 : 12;
+    const totalW = (count - 1) * spacing;
+    const cx = canvas.width / 2, cy = 150;
+    for (let i = 0; i < count; i++) origins.push({ x: cx - totalW / 2 + i * spacing, y: cy });
+    return origins;
+  }
+
+  function startSmoke() {
+    const origins = getStickOrigins();
+    const emitRate = stickCount >= 5 ? 25 : stickCount >= 3 ? 35 : 60;
+    (function emit() {
+      if (!lit) return;
+      for (const o of origins) {
+        if (Math.random() < 0.6) {
+          smokeParticles.push({
+            x: o.x, y: o.y,
+            vx: (Math.random() - 0.5) * 1.6,
+            vy: -(0.3 + Math.random() * 0.7),
+            life: 1, decay: 0.003 + Math.random() * 0.005,
+            radius: 4 + Math.random() * 8,
+          });
+        }
+      }
+      setTimeout(emit, emitRate + Math.random() * emitRate);
+    })();
+    (function animate() {
+      if (!lit) { smokeAnimId = null; return; }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = smokeParticles.length - 1; i >= 0; i--) {
+        const p = smokeParticles[i];
+        p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+        if (p.life <= 0) { smokeParticles.splice(i, 1); continue; }
+        const alpha = p.life * 0.45;
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
+        grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        grad.addColorStop(0.4, `rgba(255,255,255,${alpha * 0.6})`);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad; ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill();
+      }
+      smokeAnimId = requestAnimationFrame(animate);
+    })();
+  }
+
+  function dissipate() {
+    lit = false;
+    blessing.style.transition = 'opacity 1.5s ease';
+    blessing.classList.remove('blessing-visible');
+    stickTips.forEach(t => t.classList.remove('stick-tip-glowing'));
+    setTimeout(() => {
+      smokeParticles = []; ctx.clearRect(0, 0, canvas.width, canvas.height);
+      btnRetry.classList.add('btn-retry-visible');
+      prompt.style.opacity = '1'; prompt.textContent = '';
+    }, 1500);
+  }
+
+  btnRetry.addEventListener('click', () => {
+    btnRetry.classList.remove('btn-retry-visible');
+    blessing.classList.remove('blessing-visible'); blessing.textContent = '';
+    incenseScene.classList.add('scene-hidden');
+    pickScene.classList.remove('scene-hidden');
+    resetIncense();
+  });
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  document.addEventListener('touchstart', initAudio, { once: true });
+  document.addEventListener('mousedown', initAudio, { once: true });
+})();
+</script>
+</body>
+</html>
