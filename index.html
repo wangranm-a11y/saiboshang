@@ -337,12 +337,14 @@
   burner.addEventListener('mouseup', endHold);
   burner.addEventListener('mouseleave', endHold);
 
+  let burnPulse = null;
   function lightIncense() {
     lit = true; prompt.style.opacity = '0';
     stickTips.forEach(t => t.classList.add('stick-tip-glowing'));
-    playIgnite(); vibrate([15, 20, 40]);
-    playHum();
-    if (stickCount >= 3) setTimeout(playOverlayHum, 300);
+    // 点火瞬间：双击震感
+    vibrate([15, 30, 15]);
+    // 燃烧中脉搏：每秒一次极轻震感
+    burnPulse = setInterval(() => { if (lit) vibrate(15); }, 900);
     blessing.textContent = blessings[Math.floor(Math.random() * blessings.length)];
     startSmoke();
     setTimeout(() => blessing.classList.add('blessing-visible'), 600);
@@ -398,9 +400,11 @@
 
   function dissipate() {
     lit = false;
+    if (burnPulse) { clearInterval(burnPulse); burnPulse = null; }
     blessing.style.transition = 'opacity 1.5s ease';
     blessing.classList.remove('blessing-visible');
     stickTips.forEach(t => t.classList.remove('stick-tip-glowing'));
+    vibrate(20);
     setTimeout(() => {
       smokeParticles = []; ctx.clearRect(0, 0, canvas.width, canvas.height);
       btnRetry.classList.add('btn-retry-visible');
